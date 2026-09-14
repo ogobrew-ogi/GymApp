@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@source "../../resources/**/*.blade.php";
+@source "../../resources/**/*.js";
+@source "../../app/Livewire/**/*.php";
+
+@theme {
+    /*
+     * Conceptual color roles from the UX/UI Specification (§5), mapped to
+     * concrete tokens here. Status colors are used consistently for status
+     * only, everywhere in the app.
+     */
+    --color-brand: #2299dd;
+    --color-status-open: #16a34a;
+    --color-status-caution: #d97706;
+    --color-status-full: #dc2626;
+    --color-status-cancelled: #6b7280;
+}
