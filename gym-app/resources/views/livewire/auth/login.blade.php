@@ -1,6 +1,10 @@
 <div class="w-full max-w-sm">
     <div class="bg-white rounded-2xl shadow-sm p-6">
-        <h1 class="text-xl font-semibold text-center mb-6">{{ config('app.name') }}</h1>
+        <img
+            src="{{ asset('images/logo.jpg') }}"
+            alt="{{ config('app.name') }}"
+            class="w-full max-w-[220px] mx-auto mb-6"
+        >
 
         <form wire:submit="login" class="space-y-4">
             <div>

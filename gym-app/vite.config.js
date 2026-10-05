@@ -31,8 +31,8 @@ export default defineConfig({
                 ],
             },
             manifest: {
-                name: 'Gym Training',
-                short_name: 'Gym',
+                name: 'Fight Dojo',
+                short_name: 'Fight Dojo',
                 description: 'Private training schedule for the gym.',
                 theme_color: '#111827',
                 background_color: '#111827',
