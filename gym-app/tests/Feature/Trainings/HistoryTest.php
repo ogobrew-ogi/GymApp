@@ -8,6 +8,7 @@ use App\Enums\TrainingStatus;
 use App\Livewire\Trainings\History;
 use App\Models\Training;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -39,9 +40,15 @@ final class HistoryTest extends TestCase
     {
         $user = User::factory()->create();
 
+        // Pinned explicitly rather than relying on the factory's random
+        // past() date for both — two independently-random past dates
+        // occasionally land the "older" one after the "newer" one,
+        // making this assertion flaky.
         $older = Training::factory()->completed()->create();
-        $older->update(['start_time' => $older->start_time->subDays(10)]);
+        $older->update(['start_time' => CarbonImmutable::now()->subDays(20)]);
+
         $newer = Training::factory()->completed()->create();
+        $newer->update(['start_time' => CarbonImmutable::now()->subDay()]);
 
         $shown = Livewire::actingAs($user)
             ->test(History::class)
