@@ -8,6 +8,7 @@ use App\DTOs\TrainingData;
 use App\Enums\TrainingStatus;
 use App\Models\Training;
 use App\Models\User;
+use App\Services\RecurringTrainingService;
 use App\Services\TrainingSchedulingService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -16,6 +17,7 @@ final class CreateTrainingAction
 {
     public function __construct(
         private readonly TrainingSchedulingService $scheduling,
+        private readonly RecurringTrainingService $recurring,
     ) {}
 
     public function execute(User $owner, TrainingData $data): Training
@@ -26,6 +28,7 @@ final class CreateTrainingAction
         // a lock while validating things that don't need one.
         $this->scheduling->assertValidWindow($data);
         $this->scheduling->assertGymOpen($data);
+        $this->recurring->assertSlotFree($data);
 
         return DB::transaction(function () use ($owner, $data): Training {
             // The overlap check and the insert happen inside the same

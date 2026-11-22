@@ -55,7 +55,9 @@ final class Edit extends Component
         $this->end_time = LocalTime::toLocal($training->end_time)->format('H:i');
         $this->max_participants = $training->max_participants;
         $this->note = (string) $training->note;
-        $this->timeLocked = $training->trainingParticipants->count() > 1;
+        // A regular training's admin owner holds no seat, so its time
+        // locks as soon as anyone joins.
+        $this->timeLocked = $training->trainingParticipants->count() > ($training->isRecurring() ? 0 : 1);
     }
 
     /**

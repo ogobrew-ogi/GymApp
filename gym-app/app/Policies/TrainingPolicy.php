@@ -47,17 +47,20 @@ final class TrainingPolicy
     public function update(User $user, Training $training): bool
     {
         return $user->is_active
-            && $user->id === $training->owner_id
+            && $this->manages($user, $training)
             && $training->status === TrainingStatus::Scheduled;
     }
 
     /**
      * Only when the owner is the sole participant (Domain Model Spec §3,
      * §5.2). Once anyone else has joined, "cancel" is the only path.
+     * A single occurrence of a regular training is cancelled, never
+     * deleted, so that day's slot stays visibly taken.
      */
     public function delete(User $user, Training $training): bool
     {
         return $user->is_active
+            && ! $training->isRecurring()
             && $user->id === $training->owner_id
             && $training->status === TrainingStatus::Scheduled
             && $training->trainingParticipants()->count() === 1;
@@ -65,14 +68,31 @@ final class TrainingPolicy
 
     /**
      * Custom ability (not a default CRUD verb) — mutually exclusive with
-     * delete: only once someone else has joined.
+     * delete: only once someone else has joined. Regular trainings can
+     * always be cancelled by an admin, whoever has joined.
      */
     public function cancel(User $user, Training $training): bool
     {
-        return $user->is_active
-            && $user->id === $training->owner_id
-            && $training->status === TrainingStatus::Scheduled
+        if (! $user->is_active || $training->status !== TrainingStatus::Scheduled) {
+            return false;
+        }
+
+        if ($training->isRecurring()) {
+            return $this->manages($user, $training);
+        }
+
+        return $user->id === $training->owner_id
             && $training->trainingParticipants()->count() > 1;
+    }
+
+    /**
+     * The owner manages their training. Regular trainings belong to the
+     * gym, so any admin can manage those too.
+     */
+    private function manages(User $user, Training $training): bool
+    {
+        return $user->id === $training->owner_id
+            || ($training->isRecurring() && $user->is_admin);
     }
 
     public function join(User $user, Training $training): bool
@@ -114,7 +134,9 @@ final class TrainingPolicy
      */
     public function leave(User $user, Training $training): bool
     {
-        if ($user->id === $training->owner_id) {
+        // Owners can't leave their own training — except a regular one,
+        // where the admin owner joins and leaves like anyone else.
+        if ($user->id === $training->owner_id && ! $training->isRecurring()) {
             return false;
         }
 

@@ -74,7 +74,12 @@
                                 <span class="text-xs text-brand font-normal">· admin</span>
                             @endif
                         </p>
-                        <p class="text-sm text-gray-500">{{ $user->username }}</p>
+                        <p class="text-sm text-gray-500">
+                            {{ $user->username }}
+                            @if ($user->phone)
+                                · <a href="tel:{{ preg_replace('/[^0-9+]/', '', $user->phone) }}" class="text-brand">{{ $user->phone }}</a>
+                            @endif
+                        </p>
                     </div>
                     <span class="text-xs font-medium px-2 py-1 rounded-full {{ $user->is_active ? 'bg-green-50 text-status-open' : 'bg-gray-100 text-status-cancelled' }}">
                         {{ $user->is_active ? 'Active' : 'Disabled' }}

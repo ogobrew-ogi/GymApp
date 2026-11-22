@@ -23,6 +23,7 @@ final class Training extends Model
      */
     protected $fillable = [
         'owner_id',
+        'recurring_training_id',
         'date',
         'start_time',
         'end_time',
@@ -51,6 +52,23 @@ final class Training extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * @return BelongsTo<RecurringTraining, $this>
+     */
+    public function recurringTraining(): BelongsTo
+    {
+        return $this->belongsTo(RecurringTraining::class);
+    }
+
+    /**
+     * Generated from an admin's weekly slot. The admin owns it but does
+     * not take a seat, so every spot is open to members.
+     */
+    public function isRecurring(): bool
+    {
+        return $this->recurring_training_id !== null;
     }
 
     /**

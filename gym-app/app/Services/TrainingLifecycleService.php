@@ -102,15 +102,15 @@ final class TrainingLifecycleService
     }
 
     /**
-     * Called by the trainings:complete-past scheduled command (Domain
-     * Model Spec §11.5 sequencing note; Architecture Spec §7). Idempotent
-     * by construction — only ever touches rows still Scheduled.
+     * Called by the trainings:purge-past scheduled command. The project
+     * owner decided no history is kept: once a training has ended it is
+     * deleted, whatever its status. Participants go with it via the
+     * foreign-key cascade.
      */
-    public function completePast(): int
+    public function purgePast(): int
     {
         return Training::query()
-            ->scheduled()
-            ->where('end_time', '<', now())
-            ->update(['status' => TrainingStatus::Completed]);
+            ->where('end_time', '<=', now())
+            ->delete();
     }
 }

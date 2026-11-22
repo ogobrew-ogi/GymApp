@@ -7,7 +7,13 @@
                     –
                     {{ $training->end_time->timezone('Europe/Sofia')->format('H:i') }}
                 </p>
-                <p class="text-sm text-gray-500">Organized by {{ $training->owner->name }}</p>
+                @if ($training->isRecurring())
+                    <p class="text-sm text-gray-500">
+                        <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-brand">Regular training</span>
+                    </p>
+                @else
+                    <p class="text-sm text-gray-500">Organized by {{ $training->owner->name }}</p>
+                @endif
             </div>
 
             @if ($training->status->value !== 'scheduled')

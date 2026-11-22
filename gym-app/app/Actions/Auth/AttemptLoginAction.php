@@ -6,6 +6,7 @@ namespace App\Actions\Auth;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -19,12 +20,17 @@ final class AttemptLoginAction
 {
     public function execute(string $username, string $password, bool $remember = false): User
     {
-        $user = User::query()->where('username', $username)->first();
+        // Phone keyboards often add a trailing space or capitalise the
+        // first letter, so the username is trimmed and matched
+        // case-insensitively. The password is still matched exactly.
+        $user = User::query()
+            ->whereRaw('lower(username) = ?', [self::normalize($username)])
+            ->first();
 
         // Deliberately generic message regardless of which check fails
         // (unknown username vs. wrong password) to avoid revealing
         // account existence.
-        if (! $user instanceof User || ! Auth::validate(['username' => $username, 'password' => $password])) {
+        if (! $user instanceof User || ! Hash::check($password, $user->password)) {
             throw ValidationException::withMessages([
                 'username' => __('These credentials do not match our records.'),
             ]);
@@ -39,5 +45,10 @@ final class AttemptLoginAction
         Auth::login($user, $remember);
 
         return $user;
+    }
+
+    public static function normalize(string $username): string
+    {
+        return mb_strtolower(trim($username));
     }
 }

@@ -6,6 +6,8 @@ namespace App\Livewire\Trainings;
 
 use App\Actions\Training\JoinTrainingAction;
 use App\Actions\Training\LeaveTrainingAction;
+use App\Enums\TrainingStatus;
+use App\Models\Announcement;
 use App\Models\Training;
 use App\Support\LocalTime;
 use Carbon\CarbonImmutable;
@@ -23,11 +25,7 @@ final class TrainingList extends Component
 {
     /**
      * Optional single-day filter (Y-m-d). Empty means the default full
-     * chronological view. UX/UI Spec §10 originally ruled out any
-     * date-picker-as-navigation on this screen ("the list scrolls;
-     * that's the only navigation method for time") — explicitly
-     * overridden per the project owner's confirmed decision once the
-     * list grew long enough that scrolling stopped being enough.
+     * chronological view. Picked from the day strip at the top of Home.
      */
     public string $selectedDate = '';
 
@@ -47,27 +45,74 @@ final class TrainingList extends Component
     }
 
     /**
+     * Upcoming trainings. Cancelled ones stay listed (with a badge) until
+     * their end time so people who joined can see it was called off;
+     * after that every training is deleted.
+     *
      * @return Collection<int, Training>
      */
     #[Computed]
     public function trainings(): Collection
     {
-        return Training::query()
-            ->scheduled()
+        return $this->upcoming()
             ->chronological()
             ->with(['owner', 'trainingParticipants'])
             ->when(
                 $this->selectedDate !== '',
-                // Not a plain `where('date', ...)` — the `date` column is
-                // stored with a full "Y-m-d H:i:s" timestamp regardless
-                // of its `date` cast (Eloquent's date/datetime casts
-                // don't change the storage format, only how the value
-                // reads back), so an exact string match would silently
-                // never hit. whereDate() correctly truncates to the
-                // calendar day on both sides of the comparison.
+                // whereDate(), not where('date', …): the column holds a
+                // full "Y-m-d H:i:s" string, so an exact match never hits.
                 fn (Builder $q): Builder => $q->whereDate('date', $this->selectedDate),
             )
             ->get();
+    }
+
+    /**
+     * Days shown in the strip, each flagged when something is scheduled.
+     *
+     * @return list<array{date: string, weekday: string, day: string, month: string, hasTrainings: bool, isToday: bool}>
+     */
+    #[Computed]
+    public function days(): array
+    {
+        $busy = $this->upcoming()
+            ->where('status', TrainingStatus::Scheduled)
+            ->get(['start_time'])
+            ->map(fn (Training $t): string => LocalTime::toLocal($t->start_time)->toDateString())
+            ->unique()
+            ->flip();
+
+        $today = CarbonImmutable::parse($this->minSelectableDate, LocalTime::DISPLAY_TIMEZONE);
+        $days = [];
+
+        for ($i = 0; $i <= 30; $i++) {
+            $day = $today->addDays($i);
+            $key = $day->toDateString();
+
+            $days[] = [
+                'date' => $key,
+                'weekday' => $i === 0 ? 'Today' : $day->format('D'),
+                'day' => $day->format('j'),
+                'month' => $day->format('M'),
+                'hasTrainings' => $busy->has($key),
+                'isToday' => $i === 0,
+            ];
+        }
+
+        return $days;
+    }
+
+    /**
+     * @return Collection<int, Announcement>
+     */
+    #[Computed]
+    public function announcements(): Collection
+    {
+        return Announcement::query()->active()->with('creator')->latest()->get();
+    }
+
+    public function selectDate(string $date): void
+    {
+        $this->selectedDate = $this->selectedDate === $date ? '' : $date;
     }
 
     public function clearDateFilter(): void
@@ -122,6 +167,19 @@ final class TrainingList extends Component
         }
 
         unset($this->trainings);
+    }
+
+    /**
+     * Not yet ended, scheduled or cancelled. Doesn't rely on the purge
+     * job having run, so an ended training disappears right away.
+     *
+     * @return Builder<Training>
+     */
+    private function upcoming(): Builder
+    {
+        return Training::query()
+            ->whereIn('status', [TrainingStatus::Scheduled, TrainingStatus::Cancelled])
+            ->where('end_time', '>', now());
     }
 
     public function render(): View

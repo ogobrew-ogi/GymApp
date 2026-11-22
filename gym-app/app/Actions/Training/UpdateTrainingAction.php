@@ -7,6 +7,7 @@ namespace App\Actions\Training;
 use App\DTOs\TrainingData;
 use App\Models\Training;
 use App\Models\User;
+use App\Services\RecurringTrainingService;
 use App\Services\TrainingSchedulingService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -16,6 +17,7 @@ final class UpdateTrainingAction
 {
     public function __construct(
         private readonly TrainingSchedulingService $scheduling,
+        private readonly RecurringTrainingService $recurring,
     ) {}
 
     public function execute(User $actor, Training $training, TrainingData $data): Training
@@ -23,12 +25,19 @@ final class UpdateTrainingAction
         Gate::forUser($actor)->authorize('update', $training);
 
         $participantCount = $training->trainingParticipants()->count();
-        $isSolo = $participantCount === 1;
+
+        // "Nobody else has joined yet". A regular training's admin owner
+        // holds no seat, so for those that means zero participants.
+        $isSolo = $participantCount === ($training->isRecurring() ? 0 : 1);
 
         if ($isSolo) {
             // Full edit allowed — same validation as creation.
             $this->scheduling->assertValidWindow($data);
             $this->scheduling->assertGymOpen($data);
+
+            if (! $training->isRecurring()) {
+                $this->recurring->assertSlotFree($data);
+            }
         } else {
             // Once others have joined: date/start/end are locked, only
             // note and max_participants remain editable, and

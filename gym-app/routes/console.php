@@ -2,7 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Console\Commands\CompletePastTrainings;
+use App\Console\Commands\GenerateRecurringTrainings;
+use App\Console\Commands\PurgePastTrainings;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -16,12 +17,16 @@ Artisan::command('inspire', function () {
 | Scheduled Tasks
 |--------------------------------------------------------------------------
 |
-| Architecture Spec §7: the one recurring job this application needs —
-| transitioning past-due `scheduled` trainings to `completed`. Requires
-| `php artisan schedule:run` to be invoked every minute by the host's
-| cron (or equivalent) in every environment.
+| Requires `php artisan schedule:run` to be invoked every minute by the
+| host's cron (or `php artisan schedule:work` locally).
+|
+| - Ended trainings are deleted; no history is kept.
+| - Admins' weekly slots are turned into trainings as the 30-day
+|   booking window moves forward.
 |
 */
 
-Schedule::command(CompletePastTrainings::class)->everyFiveMinutes();
+Schedule::command(PurgePastTrainings::class)->everyFiveMinutes();
+
+Schedule::command(GenerateRecurringTrainings::class)->hourly();
 

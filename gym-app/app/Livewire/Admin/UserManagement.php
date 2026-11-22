@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin;
 
+use App\Actions\Auth\AttemptLoginAction;
 use App\Actions\User\CreateUserAction;
 use App\Actions\User\DeleteUserAction;
 use App\Actions\User\ResetUserPasswordAction;
@@ -53,18 +54,35 @@ final class UserManagement extends Component
     }
 
     /**
-     * @return array<string, list<string>>
+     * @return array<string, list<mixed>>
      */
     protected function rules(): array
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'max:255', 'unique:users,username'],
+            'username' => [
+                'required',
+                'string',
+                'max:255',
+                // Login matches usernames case-insensitively, so "Bob"
+                // and "bob" must not both exist.
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $taken = User::query()
+                        ->whereRaw('lower(username) = ?', [AttemptLoginAction::normalize((string) $value)])
+                        ->exists();
+
+                    if ($taken) {
+                        $fail(__('validation.unique', ['attribute' => $attribute]));
+                    }
+                },
+            ],
         ];
     }
 
     public function addUser(CreateUserAction $action): void
     {
+        $this->username = trim($this->username);
+
         $this->validate();
 
         $result = $action->execute(auth()->user(), new NewUserData(

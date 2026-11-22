@@ -37,7 +37,7 @@ final class Login extends Component
 
         // Login throttling per the accepted engineering recommendation
         // (Architecture Spec §12) — keyed by username + IP.
-        $throttleKey = mb_strtolower($this->username).'|'.request()->ip();
+        $throttleKey = AttemptLoginAction::normalize($this->username).'|'.request()->ip();
 
         if (RateLimiter::tooManyAttempts($throttleKey, maxAttempts: 5)) {
             $seconds = RateLimiter::availableIn($throttleKey);

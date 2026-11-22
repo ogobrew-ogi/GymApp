@@ -14,14 +14,15 @@ declare(strict_types=1);
 */
 
 use App\Http\Controllers\Auth\LogoutController;
+use App\Livewire\Admin\Announcements;
 use App\Livewire\Admin\GymClosures;
+use App\Livewire\Admin\RecurringTrainings;
 use App\Livewire\Admin\UserManagement;
 use App\Livewire\Auth\ChangePassword;
 use App\Livewire\Auth\Login;
 use App\Livewire\Profile;
 use App\Livewire\Trainings\Create;
 use App\Livewire\Trainings\Edit;
-use App\Livewire\Trainings\History;
 use App\Livewire\Trainings\Show;
 use App\Livewire\Trainings\TrainingList;
 use Illuminate\Support\Facades\Route;
@@ -41,7 +42,6 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/trainings/create', Create::class)->name('trainings.create');
         Route::get('/trainings/{training}', Show::class)->name('trainings.show');
         Route::get('/trainings/{training}/edit', Edit::class)->name('trainings.edit');
-        Route::get('/history', History::class)->name('history');
 
         Route::get('/profile', Profile::class)->name('profile');
 
@@ -55,6 +55,8 @@ Route::middleware('auth')->group(function (): void {
 
         Route::middleware('can:viewAny,App\Models\GymClosure')->group(function (): void {
             Route::get('/admin/closures', GymClosures::class)->name('admin.closures.index');
+            Route::get('/admin/recurring', RecurringTrainings::class)->name('admin.recurring.index');
+            Route::get('/admin/announcements', Announcements::class)->name('admin.announcements.index');
         });
     });
 });

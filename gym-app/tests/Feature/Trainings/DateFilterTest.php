@@ -17,6 +17,14 @@ final class DateFilterTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Fixed morning clock so "today 18:00" is always still upcoming.
+        $this->travelTo(CarbonImmutable::parse('2026-11-16 08:00', LocalTime::DISPLAY_TIMEZONE));
+    }
+
     private function trainingOn(string $date, string $startTime = '18:00'): Training
     {
         return Training::factory()->create([

@@ -3,7 +3,9 @@
     $user = auth()->user();
     $participants = $training->trainingParticipants;
     $count = $participants->count();
-    $isOwner = $training->owner_id === $user->id;
+    // On a regular training the admin owner holds no seat and joins or
+    // leaves like anyone else, so only a normal owner is "organizing".
+    $isOwner = $training->owner_id === $user->id && ! $training->isRecurring();
     $isParticipant = $participants->contains('user_id', $user->id);
     $isFull = $count >= $training->max_participants;
     $isScheduled = $training->status->value === 'scheduled';
@@ -32,7 +34,14 @@
             @endunless
         </div>
 
-        <p class="text-sm text-gray-600">Organized by <strong>{{ $training->owner->name }}</strong></p>
+        @if ($training->isRecurring())
+            <p class="text-sm text-gray-600">
+                <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-brand mr-1">Regular</span>
+                Set by <strong>{{ $training->owner->name }}</strong>
+            </p>
+        @else
+            <p class="text-sm text-gray-600">Organized by <strong>{{ $training->owner->name }}</strong></p>
+        @endif
 
         @if ($training->note)
             <p class="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{{ $training->note }}</p>
@@ -42,12 +51,28 @@
             <p class="text-sm font-medium text-gray-700 mb-2">
                 Participants ({{ $count }} of {{ $training->max_participants }})
             </p>
-            <ul class="space-y-1">
+            @if ($count === 0)
+                <p class="text-sm text-gray-400">Nobody has joined yet.</p>
+            @endif
+            <ul class="divide-y divide-gray-100">
                 @foreach ($participants as $participant)
-                    <li class="text-sm text-gray-600">
-                        {{ $participant->user->name }}
-                        @if ($participant->user_id === $training->owner_id)
-                            <span class="text-gray-400">· organizer</span>
+                    <li class="flex items-center justify-between gap-3 py-2 text-sm">
+                        <span class="text-gray-700 min-w-0 truncate">
+                            {{ $participant->user->name }}
+                            @if ($participant->user_id === $training->owner_id && ! $training->isRecurring())
+                                <span class="text-gray-400">· organizer</span>
+                            @endif
+                        </span>
+                        @if ($participant->user->phone)
+                            <a
+                                href="tel:{{ preg_replace('/[^0-9+]/', '', $participant->user->phone) }}"
+                                class="shrink-0 inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg bg-gray-50 text-brand font-medium"
+                            >
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2" />
+                                </svg>
+                                {{ $participant->user->phone }}
+                            </a>
                         @endif
                     </li>
                 @endforeach
@@ -81,8 +106,8 @@
                     <span class="block text-center text-sm text-gray-400 py-2">This training is full</span>
                 @endif
 
-                {{-- Secondary/destructive owner actions --}}
-                @if ($isOwner)
+                {{-- Secondary/destructive actions for whoever manages it --}}
+                @if ($isOwner || $user->can('update', $training) || $user->can('cancel', $training))
                     <div class="flex gap-2">
                         @can('update', $training)
                             <a
@@ -123,8 +148,8 @@
     @if ($confirmingCancel)
         <div class="bg-white rounded-2xl shadow-sm p-5 space-y-3 border border-status-full/30">
             <p class="text-sm text-gray-700">
-                Cancelling will notify no one automatically, but the training will be marked
-                Cancelled and stay visible to everyone who joined. This can't be undone.
+                Cancelling will notify no one automatically. The training stays on the list
+                marked Cancelled until its end time, then it is removed. This can't be undone.
             </p>
             <div class="flex gap-2">
                 <button wire:click="$set('confirmingCancel', false)" class="flex-1 min-h-[44px] rounded-lg border border-gray-300 text-sm font-medium">

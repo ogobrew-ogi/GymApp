@@ -39,9 +39,8 @@ final class TrainingFactory extends Factory
     }
 
     /**
-     * A window that has already fully passed — the raw material for
-     * `completed()`, and useful on its own for exercising the
-     * `trainings:complete-past` command against real data.
+     * A window that has already fully passed — what the
+     * `trainings:purge-past` command deletes.
      */
     public function past(): static
     {

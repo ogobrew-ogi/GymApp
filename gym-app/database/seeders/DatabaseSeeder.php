@@ -74,22 +74,9 @@ final class DatabaseSeeder extends Seeder
         $this->join($full, $carol);
         $this->join($full, $dave);
 
-        // Completed — already in the past, in the same terminal state the
-        // trainings:complete-past scheduled command would leave it in
-        // (Architecture Spec §7), demonstrating the History screen.
-        $completed = Training::factory()->create([
-            'owner_id' => $dave->id,
-            ...$this->window(days: -2, hour: 18, durationMinutes: 60),
-            'max_participants' => 8,
-            'status' => TrainingStatus::Completed,
-            'note' => "Last week's conditioning class",
-        ]);
-        $this->join($completed, $dave);
-        $this->join($completed, $erin);
-
-        // Cancelled with participants already joined — stays visible with
-        // a Cancelled badge rather than disappearing (Project Brief,
-        // "Business Rules").
+        // Cancelled with participants already joined — stays on Home with
+        // a Cancelled badge until its end time, then trainings:purge-past
+        // deletes it like any other ended training.
         $cancelled = Training::factory()->create([
             'owner_id' => $erin->id,
             ...$this->window(days: 4, hour: 20, durationMinutes: 60),

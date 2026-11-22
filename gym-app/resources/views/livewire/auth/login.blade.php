@@ -14,6 +14,9 @@
                     id="username"
                     wire:model="username"
                     autocomplete="username"
+                    autocapitalize="none"
+                    autocorrect="off"
+                    spellcheck="false"
                     autofocus
                     class="w-full min-h-[48px] rounded-lg border-gray-300 focus:border-brand focus:ring-brand px-4"
                 >

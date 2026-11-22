@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Middleware\EnsurePasswordIsChanged;
+use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,6 +21,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // rather than globally, to keep the health-check endpoint reachable.
         $middleware->alias([
             'password.change' => EnsurePasswordIsChanged::class,
+        ]);
+
+        // Runs on every web request, Livewire updates included, so a
+        // disabled account is signed out on its next click.
+        $middleware->web(append: [
+            EnsureUserIsActive::class,
         ]);
 
         // Trust the reverse proxy in front of the app (e.g. a Cloudflare
